@@ -29,7 +29,7 @@ int main()
     printf("size: %lu\n", dynarray_size(a));
     printf("capacity: %lu\n", dynarray_capacity(a));
 
-    for (size_t i = 0; i < 14; i++)
+    for (size_t i = 0; i < 15; i++)
     {
         dynarray_pop(a);
     }
