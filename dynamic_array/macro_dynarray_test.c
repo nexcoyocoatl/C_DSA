@@ -1,57 +1,68 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include "macro_dynarray.c"
+#include "macro_dynarray.h"
+
+// Passes array by reference to avoid malloc on a local scope
+void test_int_inside_function(int **dynarray)
+{
+    for (size_t i = 30; i < 35; i++)
+    {
+        // Will need to malloc here
+        dynarray_push(dynarray, i);
+    }
+}
 
 int main()
 {
     dynarray(int) a;
-    dynarray_init(a);
+    dynarray_init(&a);
     
-    printf("size: %lu\n", dynarray_size(a));
-    printf("capacity: %lu\n", dynarray_capacity(a));
+    printf("size: %llu\n", dynarray_size(&a));
+    printf("capacity: %llu\n", dynarray_capacity(&a));
 
     for (size_t i = 0; i < 30; i++)
     {
-        dynarray_push(a, i);
+        dynarray_push(&a, i);
         printf("%d, ", a[i]);
     }
     printf("\n");
 
-    printf("size: %lu\n", dynarray_size(a));
-    printf("capacity: %lu\n", dynarray_capacity(a));
+    test_int_inside_function(&a);
 
-    for (size_t i = 0; i <= 30; i++)
+    printf("size: %llu\n", dynarray_size(&a));
+    printf("capacity: %llu\n", dynarray_capacity(&a));
+
+    for (size_t i = 0; i < 35; i++)
     {
         printf("%d, ", a[i]);
     }
     printf("\n");
 
-    printf("size: %lu\n", dynarray_size(a));
-    printf("capacity: %lu\n", dynarray_capacity(a));
+    printf("size: %llu\n", dynarray_size(&a));
+    printf("capacity: %llu\n", dynarray_capacity(&a));
 
     for (size_t i = 0; i < 15; i++)
     {
-        dynarray_pop(a);
+        dynarray_remove_last(&a);
     }
 
-    printf("size: %lu\n", dynarray_size(a));
-    printf("capacity: %lu\n", dynarray_capacity(a));
+    printf("size: %llu\n", dynarray_size(&a));
+    printf("capacity: %llu\n", dynarray_capacity(&a));
 
-    dynarray_pop(a);
+    dynarray_remove_last(&a);
 
-    printf("size: %lu\n", dynarray_size(a));
-    printf("capacity: %lu\n", dynarray_capacity(a));
+    printf("size: %llu\n", dynarray_size(&a));
+    printf("capacity: %llu\n", dynarray_capacity(&a));
 
     dynarray(char*) b;
-    dynarray_init(b);
+    dynarray_init(&b);
 
-    printf("b size: %lu\n", dynarray_size(b));
-    printf("b capacity: %lu\n", dynarray_capacity(b));
+    printf("b size: %llu\n", dynarray_size(&b));
+    printf("b capacity: %llu\n", dynarray_capacity(&b));
 
     char* s = "a";
-    dynarray_push(b, s);
+    dynarray_push(&b, s);
     s = "b";
-    dynarray_push(b, s);
+    dynarray_push(&b, s);
 
     for (size_t i = 0; i < 2; i++)
     {
@@ -65,8 +76,8 @@ int main()
     };
 
     dynarray(struct test1*) c;
-    dynarray_init(c);
-    dynarray_push(c, malloc(sizeof *c * 1));
+    dynarray_init(&c);
+    dynarray_push(&c, malloc(sizeof (*c) * 1));
     c[0]->num = 1;
     printf("%d\n", c[0]->num);
 
@@ -75,15 +86,15 @@ int main()
     };
 
     dynarray(struct test2*) d;
-    dynarray_init(d);
-    dynarray_push(d, malloc(sizeof *d * 1));
+    dynarray_init(&d);
+    dynarray_push(&d, malloc(sizeof(char) * 13));
     strcpy(d[0]->string, "Hello, World");
     printf("%s\n", d[0]->string);
 
-    dynarray_free(a);
-    dynarray_free(b);
-    dynarray_free_all(c, free);
-    dynarray_free_all(d, free);
+    dynarray_free(&a);
+    dynarray_free(&b);
+    dynarray_free_all(&c, free);
+    dynarray_free_all(&d, free);
 
     return 0;
 }
