@@ -4,10 +4,10 @@
 // Passes array by reference to avoid malloc on a local scope
 void test_int_inside_function(int **dynarray)
 {
-    for (size_t i = 30; i < 35; i++)
+    for (int i = 14; i > 0; i--)
     {
         // Will need to malloc here
-        dynarray_push_last(dynarray, i);
+        dynarray_push_first(dynarray, i);
     }
 }
 
@@ -19,21 +19,21 @@ int main()
     printf("size: %llu\n", dynarray_size(&a));
     printf("capacity: %llu\n", dynarray_capacity(&a));
 
-    for (size_t i = 0; i < 30; i++)
+    for (size_t i = 0; i <= 15; i++)
     {
-        dynarray_push_last(&a, i);
-        printf("%d, ", a[i]);
+        dynarray_push_last(&a, i+15);
+        printf("%d ", a[i]);
     }
     printf("\n");
-
-    test_int_inside_function(&a);
 
     printf("size: %llu\n", dynarray_size(&a));
     printf("capacity: %llu\n", dynarray_capacity(&a));
 
-    for (size_t i = 0; i < 35; i++)
+    test_int_inside_function(&a);
+
+    for (size_t i = 0; i < dynarray_size(&a); i++)
     {
-        printf("%d, ", a[i]);
+        printf("%d ", a[i]);
     }
     printf("\n");
 
@@ -42,8 +42,28 @@ int main()
 
     for (size_t i = 0; i < 15; i++)
     {
+        dynarray_remove_first(&a);
+    }
+
+    for (size_t i = 0; i < dynarray_size(&a); i++)
+    {
+        printf("%d ", a[i]);
+    }
+    printf("\n");
+
+    printf("size: %llu\n", dynarray_size(&a));
+    printf("capacity: %llu\n", dynarray_capacity(&a));
+
+    for (size_t i = 0; i < 10; i++)
+    {
         dynarray_remove_last(&a);
     }
+
+    for (size_t i = 0; i < dynarray_size(&a); i++)
+    {
+        printf("%d ", a[i]);
+    }
+    printf("\n");
 
     printf("size: %llu\n", dynarray_size(&a));
     printf("capacity: %llu\n", dynarray_capacity(&a));

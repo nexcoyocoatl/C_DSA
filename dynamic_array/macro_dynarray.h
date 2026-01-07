@@ -91,9 +91,9 @@ struct dynarray_header
 // Shifts right from index
 #define dynarray_shift_right_from(DA, index) \
     { \
-        for (uint64 i = dynarray_size(DA) - 1; i > index; i--) \
+        for (uint64 i = dynarray_size(DA); i > index; i--) \
         { \
-            (*DA)[i+1] = (*DA)[i]; \
+            (*DA)[i] = (*DA)[i-1]; \
         } \
     } \
 
@@ -157,9 +157,9 @@ struct dynarray_header
     { \
         if (dynarray_get_header(DA)->m_size) \
         { \
-            dynarray_get_header(DA)->m_size--; \
             dynarray_shift_left(DA); \
             dynarray_check_reduce(DA); \
+            dynarray_get_header(DA)->m_size--; \
         } \
     }
 
