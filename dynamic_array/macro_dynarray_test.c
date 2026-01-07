@@ -7,7 +7,7 @@ void test_int_inside_function(int **dynarray)
     for (size_t i = 30; i < 35; i++)
     {
         // Will need to malloc here
-        dynarray_push(dynarray, i);
+        dynarray_push_last(dynarray, i);
     }
 }
 
@@ -21,7 +21,7 @@ int main()
 
     for (size_t i = 0; i < 30; i++)
     {
-        dynarray_push(&a, i);
+        dynarray_push_last(&a, i);
         printf("%d, ", a[i]);
     }
     printf("\n");
@@ -60,9 +60,9 @@ int main()
     printf("b capacity: %llu\n", dynarray_capacity(&b));
 
     char* s = "a";
-    dynarray_push(&b, s);
+    dynarray_push_last(&b, s);
     s = "b";
-    dynarray_push(&b, s);
+    dynarray_push_last(&b, s);
 
     for (size_t i = 0; i < 2; i++)
     {
@@ -77,7 +77,7 @@ int main()
 
     dynarray(struct test1*) c;
     dynarray_init(&c);
-    dynarray_push(&c, malloc(sizeof (*c) * 1));
+    dynarray_push_last(&c, malloc(sizeof (*c) * 1));
     c[0]->num = 1;
     printf("%d\n", c[0]->num);
 
@@ -87,7 +87,7 @@ int main()
 
     dynarray(struct test2*) d;
     dynarray_init(&d);
-    dynarray_push(&d, malloc(sizeof(char) * 13));
+    dynarray_push_last(&d, malloc(sizeof(char) * 13));
     strcpy(d[0]->string, "Hello, World");
     printf("%s\n", d[0]->string);
 
