@@ -7,51 +7,65 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define uint64 unsigned long long
+
 struct dynarray_header
 {
-    size_t m_capacity;
-    size_t m_size;
+    uint64 m_capacity;
+    uint64 m_size;
 };
 
-// Creates a dynamic array (eg: dynarray(int a) -> int a*)
+// Creates a dynamic array (eg: dynarray(int) a -> int a*)
 #define dynarray(T) T*
 
 // Initializes dynamic array, allocating 8 spaces from the start
 #define dynarray_init(DA) \
     { \
-        size_t initial_capacity = 8; \
-        struct dynarray_header *header = malloc((sizeof(*header)) + (size_t)(initial_capacity*sizeof(DA))); \
+        uint64 initial_capacity = 8; \
+        struct dynarray_header *header = malloc((sizeof(*header)) + (uint64)(initial_capacity*sizeof(**DA))); \
         header->m_capacity = initial_capacity; \
         header->m_size = 0; \
-        DA = (void*)(header + 1); \
+        (*DA) = (void*)(header + 1); \
     }
 
+// Initializes dynamic array, allocating n spaces from the start
+#define dynarray_init_n(DA, n) \
+    { \
+        uint64 initial_capacity = n; \
+        struct dynarray_header *header = malloc((sizeof(*header)) + (uint64)(initial_capacity*sizeof(**DA))); \
+        header->m_capacity = initial_capacity; \
+        header->m_size = 0; \
+        (*DA) = (void*)(header + 1); \
+    }
+    
 // To get to the header, casts array to header type and subtracts 1
 #define dynarray_get_header(DA) \
-    (((struct dynarray_header*)(DA)) - 1)
+    (((struct dynarray_header*)(*DA)) - 1)
 
 // Returns size by accessing the header
 #define dynarray_size(DA) \
-    ((DA)? dynarray_get_header(DA)->m_size : 0)
+    ((*DA)? dynarray_get_header(DA)->m_size : 0)
 
 // Returns capacity from the header
 #define dynarray_capacity(DA) \
-    ((DA)? dynarray_get_header(DA)->m_capacity : 0)
+    ((*DA)? dynarray_get_header(DA)->m_capacity : 0)
 
 // Resizes with realloc to the required size
 #define dynarray_resize(DA, required_size) \
     { \
         struct dynarray_header *header = dynarray_get_header(DA); \
         header->m_capacity = required_size; \
-        header = (struct dynarray_header*)realloc(header, (sizeof *header) + (size_t)(header->m_capacity * sizeof(DA))); \
-        header->m_capacity = required_size; \
-        DA = (void*)(header + 1); \
+        header = (struct dynarray_header*)realloc(header, (sizeof *header) + (uint64)(required_size * sizeof(**DA))); \
+        (*DA) = (void*)(header + 1); \
     }
 
 // Shifts all elements to the left by one
 #define dynarray_shift_left(DA) \
     { \
-        for (size_t i = 0; i < dynarray_size(DA) - 1; i++) { DA[i] = DA[i+1]; } \
+        for (uint64 i = 0; i < dynarray_size(DA) - 1; i++) \
+        { \
+            DA[i] = DA[i+1]; \
+        } \
         dynarray_get_header(DA)->m_size--; \
     }
 
@@ -80,36 +94,36 @@ struct dynarray_header
     } \
 
 // Inserts an element to the end of the list,
-// changing capacity by powers of two if needed
+// multiplying capacity by 2 if needed
 #define dynarray_push(DA, E) \
     { \
-        if ( (dynarray_get_header(DA)->m_size << 1) > dynarray_get_header(DA)->m_capacity)\
-            { \
-                size_t new_capacity = dynarray_get_header(DA)->m_capacity << 1; \
-                dynarray_resize(DA, new_capacity); \
-            } \
-        DA[dynarray_size(DA)] = E; \
+        if ( (dynarray_get_header(DA)->m_size * 2) > dynarray_get_header(DA)->m_capacity ) \
+        { \
+            uint64 new_capacity = dynarray_get_header(DA)->m_capacity * 2; \
+            dynarray_resize(DA, new_capacity); \
+        } \
+        (*DA)[dynarray_size(DA)] = E; \
         dynarray_get_header(DA)->m_size++; \
     }
 
 // Removes element from the end of the line,
-// changing capacity by powers of two if needed
+// dividing capacity by 2 if needed
 #define dynarray_remove_last(DA) \
     { \
         if (dynarray_get_header(DA)->m_size) \
         { \
-            if ( (dynarray_get_header(DA)->m_size) < ((dynarray_get_header(DA)->m_capacity) >> 1) ) \
+            if ( dynarray_get_header(DA)->m_size < (dynarray_get_header(DA)->m_capacity / 2) ) \
             { \
-                size_t new_capacity = dynarray_get_header(DA)->m_capacity >> 1; \
+                uint64 new_capacity = dynarray_get_header(DA)->m_capacity / 2; \
                 dynarray_resize(DA, new_capacity); \
             } \
-            dynarray_get_header(DA)->m_size--;\
+            dynarray_get_header(DA)->m_size--; \
         } \
     }
 
 // Takes out element from the end of the list
 #define dynarray_pop(DA, out) \
-    { out = DA[dynarray_size(DA)-1]; dynarray_remove_last(DA); }
+    { out = (*DA)[dynarray_size(DA)-1]; dynarray_remove_last(DA); }
 
 // Adds to the end of the list (same as push)
 #define dynarray_enqueue(DA, E) \
@@ -129,23 +143,26 @@ struct dynarray_header
 
 // Clears list memory
 #define dynarray_free(DA) \
-    { \
-        if (DA) { \
-            memset(DA, 0, (size_t)dynarray_size(DA) * (sizeof *(DA))); \
-            free(dynarray_get_header(DA));\
-            (DA) = NULL;\
-        } \
-    }
+    if (*DA) \
+    {\
+        memset(*DA, 0, (uint64)dynarray_size(DA) * (sizeof(**DA))); \
+        free(dynarray_get_header(DA));\
+        (*DA) = NULL;\
+    } \
 
 // Clears list memory and its objects (for a list of objects in the heap)
 #define dynarray_free_all(DA, F) \
-    { if (DA) { \
-            for (size_t i = 0; i < dynarray_size(DA); i++) \
+    { \
+    if (*DA) \
+        { \
+            for (uint64 i = 0; i < dynarray_size(DA); i++) \
             { \
-                F((DA)[i]); \
+                F((*DA)[i]); \
             } \
-            memset(DA, 0, (size_t)dynarray_size(DA) * (sizeof *(DA))); \
-            free(dynarray_get_header(DA)); (DA) = NULL; } \
+            memset(*DA, 0, (uint64)dynarray_size(DA) * (sizeof(**DA))); \
+            free(dynarray_get_header(DA)); \
+            (*DA) = NULL; \
+        } \
     }
 
 #endif
