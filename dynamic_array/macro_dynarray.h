@@ -59,87 +59,127 @@ struct dynarray_header
         (*DA) = (void*)(header + 1); \
     }
 
+// Multiplies capacity by 2 if needed
+#define dynarray_check_enlarge(DA) \
+{ \
+    if ( (dynarray_get_header(DA)->m_size * 2) > dynarray_get_header(DA)->m_capacity ) \
+    { \
+        uint64 new_capacity = dynarray_get_header(DA)->m_capacity * 2; \
+        dynarray_resize(DA, new_capacity); \
+    } \
+}
+
+// Divides capacity by 2 if needed
+#define dynarray_check_reduce(DA) \
+{ \
+    if ( dynarray_get_header(DA)->m_size < (dynarray_get_header(DA)->m_capacity / 2) ) \
+    { \
+        uint64 new_capacity = dynarray_get_header(DA)->m_capacity / 2; \
+        dynarray_resize(DA, new_capacity); \
+    } \
+}
+
+// Shifts left from end to index
+#define dynarray_shift_left_to(DA, index) \
+    { \
+        for (uint64 i = index; i < dynarray_size(DA) - 1; i++) \
+        { \
+            (*DA)[i] = (*DA)[i+1]; \
+        } \
+    } \
+
+// Shifts right from index
+#define dynarray_shift_right_from(DA, index) \
+    { \
+        for (uint64 i = dynarray_size(DA) - 1; i > index; i--) \
+        { \
+            (*DA)[i+1] = (*DA)[i]; \
+        } \
+    } \
+
 // Shifts all elements to the left by one
 #define dynarray_shift_left(DA) \
     { \
-        for (uint64 i = 0; i < dynarray_size(DA) - 1; i++) \
-        { \
-            DA[i] = DA[i+1]; \
-        } \
-        dynarray_get_header(DA)->m_size--; \
+        dynarray_shift_left_to(DA, 0); \
     }
 
-    // TODO: Shifts left from index
-#define dynarray_left_right_from(DA, index) \
+// Shifts all elements to the right by one
+#define dynarray_shift_right(DA) \
     { \
-        \
-    } \
-
-// TODO: Shifts right from index
-#define dynarray_shift_right_from(DA, index) \
-    { \
-        \
-    } \
+        dynarray_shift_right_from(DA, 0); \
+    }
 
 // TODO: Inserts element at index
-#define dynarray_insert(DA, index) \
+#define dynarray_push(DA, E, index) \
     { \
-        \
+        dynarray_check_enlarge(DA); \
+        dynarray_shift_right_from(DA, index); \
+        (*DA)[index] = E; \
+        dynarray_get_header(DA)->m_size++; \
     } \
 
 // TODO: Removes element at index
-#define dynarray_del(DA, index) \
+#define dynarray_remove(DA, index) \
     { \
-        \
+        dynarray_shift_left_to(DA, index) \
+        dynarray_check_reduce(DA); \
+        dynarray_get_header(DA)->m_size--; \
     } \
 
-// Inserts an element to the end of the list,
-// multiplying capacity by 2 if needed
-#define dynarray_push(DA, E) \
+// out is assigned the i element of the list
+#define dynarray_get(DA, i, out) \
+    out = (*DA)[i]
+
+// out is assigned the first element of the list
+#define dynarray_get_first(DA, out) \
+    out = (*DA)[0]
+
+// out is assigned the last element of the list
+#define dynarray_get_last(DA, out) \
+    out = (*DA)[dynarray_size(DA)-1]
+
+// Adds to the start of the list
+#define dynarray_push_first(DA, E) \
     { \
-        if ( (dynarray_get_header(DA)->m_size * 2) > dynarray_get_header(DA)->m_capacity ) \
-        { \
-            uint64 new_capacity = dynarray_get_header(DA)->m_capacity * 2; \
-            dynarray_resize(DA, new_capacity); \
-        } \
+        dynarray_push(DA, E, 0); \
+    }
+
+// Inserts an element to the end of the list,
+#define dynarray_push_last(DA, E) \
+    { \
+        dynarray_check_enlarge(DA); \
         (*DA)[dynarray_size(DA)] = E; \
         dynarray_get_header(DA)->m_size++; \
     }
 
-// Removes element from the end of the line,
-// dividing capacity by 2 if needed
+// Removes element from the start of the list,
+#define dynarray_remove_first(DA) \
+    { \
+        if (dynarray_get_header(DA)->m_size) \
+        { \
+            dynarray_get_header(DA)->m_size--; \
+            dynarray_shift_left(DA); \
+            dynarray_check_reduce(DA); \
+        } \
+    }
+
+// Removes element from the end of the list,
 #define dynarray_remove_last(DA) \
     { \
         if (dynarray_get_header(DA)->m_size) \
         { \
-            if ( dynarray_get_header(DA)->m_size < (dynarray_get_header(DA)->m_capacity / 2) ) \
-            { \
-                uint64 new_capacity = dynarray_get_header(DA)->m_capacity / 2; \
-                dynarray_resize(DA, new_capacity); \
-            } \
             dynarray_get_header(DA)->m_size--; \
+            dynarray_check_reduce(DA); \
         } \
     }
 
 // Takes out element from the end of the list
-#define dynarray_pop(DA, out) \
+#define dynarray_pop_last(DA, out) \
     { out = (*DA)[dynarray_size(DA)-1]; dynarray_remove_last(DA); }
 
-// Adds to the end of the list (same as push)
-#define dynarray_enqueue(DA, E) \
-    dynarray_push(DA, E)
-
 // Takes out element from the start of the list
-#define dynarray_dequeue(DA, out) \
-    { out = DA[0]; dynarray_shift_left(DA); }
-
-// out is assigned the first element of the list
-#define dynarray_get_first(DA, out) \
-    out = DA[0]
-
-// out is assigned the last element of the list
-#define dynarray_get_last(DA, out) \
-    out = DA[dynarray_size(DA)-1]
+#define dynarray_pop_first(DA, out) \
+    { out = (*DA)[0]; dynarray_remove_first(DA); }
 
 // Clears list memory
 #define dynarray_free(DA) \
