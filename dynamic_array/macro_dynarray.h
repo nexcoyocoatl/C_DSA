@@ -32,8 +32,8 @@ struct dynarray_header
 #define dynarray_init_n(DA, n) \
     { \
         uint64 initial_capacity = n; \
-        struct dynarray_header *header = malloc((sizeof(*header)) + (uint64)(n*sizeof(**DA))); \
-        header->m_capacity = n; \
+        struct dynarray_header *header = malloc((sizeof(*header)) + (uint64)(initial_capacity*sizeof(**DA))); \
+        header->m_capacity = initial_capacity; \
         header->m_size = 0; \
         (*DA) = (void*)(header + 1); \
     }
