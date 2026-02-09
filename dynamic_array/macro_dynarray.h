@@ -110,7 +110,7 @@ struct dynarray_header
         dynarray_shift_right_from(DA, 0); \
     }
 
-// TODO: Inserts element at index
+// Inserts element at index
 #define dynarray_push(DA, E, index) \
     { \
         dynarray_check_enlarge(DA); \
@@ -119,7 +119,7 @@ struct dynarray_header
         dynarray_get_header(DA)->m_size++; \
     } \
 
-// TODO: Removes element at index
+// Removes element at index
 #define dynarray_remove(DA, index) \
     { \
         dynarray_shift_left_to(DA, index) \
