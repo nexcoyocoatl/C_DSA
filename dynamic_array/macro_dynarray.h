@@ -75,16 +75,22 @@ struct dynarray_header
 #define dynarray_resize(DA, required_size) \
     do { \
         struct dynarray_header *header = dynarray_get_header(DA); \
-        uint64_t new_size = sizeof(struct dynarray_header) + ((uint64_t)(required_size) * sizeof(**(DA))); \
-        void *temp = realloc(header, new_size); \
+        uint64_t old_capacity = header->m_capacity; \
+        uint64_t new_total_bytes = sizeof(struct dynarray_header) + ((required_size) * sizeof(**(DA))); \
+        void *temp = realloc(header, new_total_bytes); \
         if (temp) { \
             header = (struct dynarray_header*)temp; \
             header->m_capacity = (required_size); \
             (*(DA)) = (void*)(header + 1); \
+            if ((required_size) > old_capacity) \
+            { \
+                uint64_t num_new_elements = (required_size) - old_capacity; \
+                memset((char*)(*(DA)) + (old_capacity * sizeof(**(DA))), 0, num_new_elements * sizeof(**(DA))); \
+            } \
         } \
         else \
         {   \
-            fprintf(stderr, "dynarray error: realloc failed to allocate %zu bytes\n", new_size); \
+            fprintf(stderr, "dynarray error: realloc failed to allocate %zu bytes\n", new_total_bytes); \
         }   \
     } while(0)
 
