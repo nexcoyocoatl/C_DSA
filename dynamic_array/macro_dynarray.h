@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <assert.h>
 
 struct dynarray_header
 {
@@ -38,6 +39,8 @@ struct dynarray_header
             (*(DA)) = (void*)(header + 1); \
         } \
     } while(0)
+
+// Initialize with an exact size
 
 // Initializes dynamic array, allocating n spaces from the start
 #define dynarray_init_n(DA, n) \
@@ -85,7 +88,7 @@ struct dynarray_header
             if ((required_size) > old_capacity) \
             { \
                 uint64_t num_new_elements = (required_size) - old_capacity; \
-                memset((char*)(*(DA)) + (old_capacity * sizeof(**(DA))), 0, num_new_elements * sizeof(**(DA))); \
+                memset(&((*(DA))[old_capacity]), 0, num_new_elements * sizeof(**(DA))); \
             } \
         } \
         else \
@@ -107,10 +110,15 @@ do { \
 // Divides capacity by 2 if needed
 #define dynarray_check_reduce(DA) \
 do { \
-    if ( dynarray_get_header(DA)->m_size < (dynarray_get_header(DA)->m_capacity / 2) ) \
+    if (dynarray_size(DA) > 0) \
     { \
-        uint64_t new_capacity = dynarray_get_header(DA)->m_capacity / 2; \
-        dynarray_resize(DA, new_capacity); \
+        uint64_t capacity = dynarray_capacity(DA); \
+        uint64_t size = dynarray_size(DA); \
+        if ( capacity > 8 && size < (capacity / 2) ) \
+        { \
+            uint64_t new_capacity = capacity / 2; \
+            dynarray_resize(DA, new_capacity); \
+        } \
     } \
 } while(0)
 
@@ -156,28 +164,34 @@ do { \
 // Removes element at index
 #define dynarray_remove(DA, index) \
     do { \
-        dynarray_shift_left_to(DA, index) \
-        dynarray_check_reduce(DA); \
+        dynarray_shift_left_to(DA, index); \
         dynarray_get_header(DA)->m_size--; \
+        dynarray_check_reduce(DA); \
     } while(0)
 
-// out is assigned the i element of the list
-#define dynarray_get(DA, i, out) \
-    out = (*(DA))[i]
+// Returns the i element of the list
+#define dynarray_get(DA, i) \
+    (assert((i) < dynarray_size(DA) && "dynarray: out of bounds!"), (*(DA))[(i)])
 
-// out is assigned the first element of the list
-#define dynarray_get_first(DA, out) \
-    out = (*(DA))[0]
+// Returns the ADDRESS of the i-th element
+#define dynarray_get_ptr(DA, i) \
+    (assert((i) < dynarray_size(DA) && "dynarray: out of bounds!"), &((*(DA))[(i)]))
 
-// Macro for the first element
-#define dynarray_first(DA) (*(DA))[0]
+// Returns the first element of the list
+#define dynarray_get_first(DA) \
+    (assert(dynarray_size((DA)) > 0 && "dynarray: empty!"), (*(DA))[0])
 
-// out is assigned the last element of the list
-#define dynarray_get_last(DA, out) \
-    out = (*(DA))[dynarray_size(DA)-1]
+// Returns the ADDRESS of the first element of the list
+#define dynarray_get_first_ptr(DA) \
+    (assert(dynarray_size((DA)) > 0 && "dynarray: empty!"), &((*(DA))[0]))
 
-// Macro for the last element
-#define dynarray_last(DA) (*(DA))[dynarray_size(DA)-1]
+// Returns the last element of the list
+#define dynarray_get_last(DA) \
+    (assert(dynarray_size((DA)) > 0 && "dynarray: empty!"), (*(DA))[(dynarray_size(DA)-1)])
+
+// Returns the ADDRESS of the last element of the list
+#define dynarray_get_last_ptr(DA) \
+    (assert(dynarray_size((DA)) > 0 && "dynarray: empty!"), &((*(DA))[(dynarray_size(DA)-1)]))
 
 // Adds to the start of the list
 #define dynarray_push_first(DA, E) \
@@ -196,39 +210,54 @@ do { \
 // Removes element from the start of the list,
 #define dynarray_remove_first(DA) \
     do { \
-        if (dynarray_get_header(DA)->m_size) \
+        if (dynarray_size(DA) > 0) \
         { \
             dynarray_shift_left(DA); \
-            dynarray_check_reduce(DA); \
             dynarray_get_header(DA)->m_size--; \
+            dynarray_check_reduce(DA); \
+        } \
+        else { \
+            fprintf(stderr, "dynarray error: remove_first on empty array\n"); \
         } \
     } while(0)
 
 // Removes element from the end of the list,
 #define dynarray_remove_last(DA) \
     do { \
-        if (dynarray_get_header(DA)->m_size) \
+        if (dynarray_size(DA) > 0) \
         { \
             dynarray_get_header(DA)->m_size--; \
             dynarray_check_reduce(DA); \
+        } \
+            else { \
+             fprintf(stderr, "dynarray error: remove_last on empty array\n"); \
         } \
     } while(0)
 
 // Takes out element from the end of the list
 #define dynarray_pop_last(DA, out) \
-    do { out = (*(DA))[dynarray_size(DA)-1]; dynarray_remove_last(DA); } while(0)
+    do { \
+        assert(dynarray_size(DA) > 0); \
+        out = (*(DA))[dynarray_size(DA)-1]; \
+        dynarray_remove_last(DA); \
+    } while(0)
 
 // Takes out element from the start of the list
 #define dynarray_pop_first(DA, out) \
-    do { out = (*(DA))[0]; dynarray_remove_first(DA); } while(0)
+    do { \
+        assert(dynarray_size(DA) > 0); \
+        out = (*(DA))[0]; \
+        dynarray_remove_first(DA); \
+    } while(0)
 
 // Clears list memory
 #define dynarray_free(DA) \
 do { \
     if (*(DA)) \
     {\
-        memset(*(DA), 0, (uint64_t)dynarray_size(DA) * (sizeof(**(DA)))); \
-        free(dynarray_get_header(DA));\
+        struct dynarray_header *header = dynarray_get_header(DA); \
+        memset(header, 0, sizeof(struct dynarray_header) + (header->m_capacity * sizeof(**(DA)))); \
+        free(header);\
         (*(DA)) = NULL;\
     } \
 } while(0)
@@ -242,9 +271,7 @@ do { \
             { \
                 F((*(DA))[i]); \
             } \
-            memset(*(DA), 0, (uint64_t)dynarray_size(DA) * (sizeof(**(DA)))); \
-            free(dynarray_get_header(DA)); \
-            (*(DA)) = NULL; \
+            dynarray_free(DA); \
         } \
     } while(0)
 
