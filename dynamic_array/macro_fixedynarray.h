@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <assert.h>
 
 struct fixedynarray_header
 {
@@ -101,7 +102,7 @@ struct fixedynarray_header
     do { \
         if (fixedynarray_size(DA)) \
         { \
-            fixedynarray_shift_left_to(DA, index) \
+            fixedynarray_shift_left_to(DA, index); \
             fixedynarray_get_header(DA)->m_size--; \
         } \
         else \
@@ -110,23 +111,21 @@ struct fixedynarray_header
         } \
     } while(0)
 
-// out is assigned the i element of the list
-#define fixedynarray_get(DA, i, out) \
-    out = (*(DA))[i]
+// Returns the i element of the list
+#define fixedynarray_get(DA, i) \
+    (assert((i) < fixedynarray_size((DA)) && "fixedynarray: out of bounds!"), (*(DA))[(i)])
 
-// out is assigned the first element of the list
-#define fixedynarray_get_first(DA, out) \
-    out = (*(DA))[0]
+// Returns the ADDRESS of the i-th element
+#define fixedynarray_at(DA, i) \
+    (assert((i) < fixedynarray_size((DA)) && "fixedynarray: out of bounds!"), &(*(DA))[(i)])
 
-// Macro for the first element
-#define fixedynarray_first(DA) (*(DA))[0]
+// Returns the first element of the list
+#define fixedynarray_get_first(DA) \
+    (assert(fixedynarray_size((DA)) > 0 && "fixedynarray: empty!"), (*(DA))[0])
 
-// out is assigned the last element of the list
-#define fixedynarray_get_last(DA, out) \
-    out = (*(DA))[fixedynarray_size(DA)-1]
-
-// Macro for the last element
-#define fixedynarray_last(DA) (*(DA))[fixedynarray_size(DA)-1]
+// Returns the last element of the list
+#define fixedynarray_get_last(DA) \
+    (assert(fixedynarray_size((DA)) > 0 && "fixedynarray: empty!"), (*(DA))[(fixedynarray_size(DA)-1)])
 
 // Adds to the start of the list
 #define fixedynarray_push_first(DA, E) \
@@ -141,6 +140,7 @@ struct fixedynarray_header
         { \
             fprintf(stderr, "fixedynarray error: array full\n"); \
         } \
+        else \
         { \
             (*(DA))[fixedynarray_size(DA)] = E; \
             fixedynarray_get_header(DA)->m_size++; \
@@ -150,7 +150,7 @@ struct fixedynarray_header
 // Removes element from the start of the list,
 #define fixedynarray_remove_first(DA) \
     do { \
-        if (fixedynarray_get_header(DA)->m_size) \
+        if (fixedynarray_size(DA)) \
         { \
             fixedynarray_shift_left(DA); \
             fixedynarray_get_header(DA)->m_size--; \
@@ -164,7 +164,7 @@ struct fixedynarray_header
 // Removes element from the end of the list,
 #define fixedynarray_remove_last(DA) \
     do { \
-        if (fixedynarray_get_header(DA)->m_size) \
+        if (fixedynarray_size(DA)) \
         { \
             fixedynarray_get_header(DA)->m_size--; \
         } \
@@ -176,19 +176,28 @@ struct fixedynarray_header
 
 // Takes out element from the end of the list
 #define fixedynarray_pop_last(DA, out) \
-    do { out = (*(DA))[fixedynarray_size(DA)-1]; fixedynarray_remove_last(DA); } while(0)
+    do { \
+        assert(fixedynarray_size(DA) > 0); \
+        out = (*(DA))[fixedynarray_size(DA)-1]; \
+        fixedynarray_remove_last(DA); \
+    } while(0)
 
 // Takes out element from the start of the list
 #define fixedynarray_pop_first(DA, out) \
-    do { out = (*(DA))[0]; fixedynarray_remove_first(DA); } while(0)
+    do { \
+        assert(fixedynarray_size(DA) > 0); \
+        out = (*(DA))[0]; \
+        fixedynarray_remove_first(DA); \
+    } while(0)
 
 // Clears list memory
 #define fixedynarray_free(DA) \
 do { \
     if (*(DA)) \
     {\
-        memset(*(DA), 0, (uint64_t)fixedynarray_size(DA) * (sizeof(**(DA)))); \
-        free(fixedynarray_get_header(DA));\
+        struct fixedynarray_header *header = fixedynarray_get_header(DA); \
+        memset(*(DA), 0, ((uint64_t)header->m_capacity * sizeof(**(DA)))); \
+        free(header);\
         (*(DA)) = NULL;\
     } \
 } while(0)
@@ -202,9 +211,7 @@ do { \
             { \
                 F((*(DA))[i]); \
             } \
-            memset(*(DA), 0, (uint64_t)fixedynarray_size(DA) * (sizeof(**(DA)))); \
-            free(fixedynarray_get_header(DA)); \
-            (*(DA)) = NULL; \
+            fixedynarray_free(DA); \
         } \
     } while(0)
 
